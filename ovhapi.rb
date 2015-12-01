@@ -9,23 +9,16 @@ require 'json'
 
 class OvhApi
 
-  def initialize(url)
-    @uri = URI.parse(url)
+  def initialize()
     @references = Hash.new()
   end
 
-  def request
+  def set_data(json)
     # Erase previous informations 
     @references = Hash.new()
 
-    # Request OVH API
-    response = Net::HTTP.get_response(@uri)
-    if response.code.to_i != 200
-      raise "Request to OVH server has failed with http return code '#{response.code}'."
-    end
-
     # Parse answer
-    data = JSON.parse(response.body)
+    data = JSON.parse(json)
 
     if data == nil
       raise JSON::JSONError, 'No data.'

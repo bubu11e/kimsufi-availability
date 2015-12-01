@@ -9,6 +9,7 @@ require 'uri'
 require 'json'
 require 'optparse'
 require 'logger'
+require 'io/console'
 require_relative 'ovhapi'
 
 # Define logger
@@ -45,6 +46,10 @@ options[:loop] = false
 options[:interval] = 0
 options[:offers] = references.keys 
 options[:commands] = []
+options[:proxy_addr] = nil
+options[:proxy_port] = nil
+options[:proxy_user] = nil
+options[:proxy_pass] = nil
 
 # Parse user specified options
 OptionParser.new do |opts|
@@ -73,50 +78,73 @@ OptionParser.new do |opts|
   opts.on('-c x,y,z', '--commands x,y,z', Array, 'List of commands to execute on offer availability (firefox https://www.kimsufi.com/fr/commande/kimsufi.xml?reference=150sk10).') do |commands|
     options[:commands] = commands
   end
+
+  # Proxy option
+  opts.on('-p', '--proxy [addr:port]', String, 'Addresse of the proxy server to use to request ovh api.') do |proxy|
+    split = proxy.split(':')
+    options[:proxy_addr] = split.length > 0 ? split[0] : nil
+    options[:proxy_port] = split.length > 1 ? split[1] : nil
+  end
+
+  # User proxy option
+  opts.on('-u', '--user [user]', String, 'User to use for proxy authentification. Password will be asked dynamically.') do |user|
+    options[:proxy_user] = user
+    puts('Proxy password ?')
+    pass = STDIN.noecho(&:gets).chomp
+    options[:proxy_pass] = pass.empty? ? nil : pass
+  end
+
 end.parse!
 
 # Initialize api interface
-api = OvhApi.new(url)
+api = OvhApi.new()
 
-begin
-  # Request OVH API
-  api.request()
+uri = URI(url)
+request = Net::HTTP::Get.new uri
+
+Net::HTTP.start(uri.host, uri.port, options[:proxy_addr], options[:proxy_port], options[:proxy_user], options[:proxy_pass], {:use_ssl => true, :keep_alive_timeout => (10 + options[:interval].to_i)})do |http|
+  begin
+    # Request OVH api
+    response = http.request request
+    # Apply received data to ovh api class
+    api.set_data(response.body)
   
-  options[:offers].each do |offer|
-    # Retrieve reference of the current offer
-    reference = references.include?(offer) ? references[offer] : offer
+    options[:offers].each do |offer|
+      # Retrieve reference of the current offer
+      reference = references.include?(offer) ? references[offer] : offer
     
-    # Check if the reference is in api
-    if api.include?(reference)
-      availability = []
+      # Check if the reference is in api
+      if api.include?(reference)
+        availability = []
 
-      # Retrieve available zone for the specified reference
-      api.get_availability(reference).each do |zone|
-        availability.push(zones.include?(zone) ? zones[zone] : zone)
-      end
-
-      if availability.length > 0
-        logger.info("Offer #{offer} currently available in the following locations: #{availability}.")
-
-        # The offer is available, we execute the list of commands
-        options[:commands].each do |command|
-          logger.info("About to execute command: '#{command}'.")
-          if system(command)
-            logger.info("Command executed successfully.")
-          else
-            logger.error("Command failed.")
-          end
+        # Retrieve available zone for the specified reference
+        api.get_availability(reference).each do |zone|
+          availability.push(zones.include?(zone) ? zones[zone] : zone)
         end
+
+        if availability.length > 0
+          logger.info("Offer #{offer} currently available in the following locations: #{availability}.")
+
+          # The offer is available, we execute the list of commands
+          options[:commands].each do |command|
+            logger.info("About to execute command: '#{command}'.")
+            if system(command)
+              logger.info("Command executed successfully.")
+            else
+              logger.error("Command failed.")
+            end
+          end
+        else
+          # The offer is currently unavailable
+          logger.info("Offer #{offer} currently not available.")
+        end
+
       else
-        # The offer is currently unavailable
-        logger.info("Offer #{offer} currently not available.")
+        logger.error("Offer #{offer}(reference: #{reference} not present in api.)")
       end
-
-    else
-      logger.error("Offer #{offer}(reference: #{reference} not present in api.)")
     end
-  end
 
-  # Wait before retry
-  sleep options[:interval]
-end while options[:loop]
+    # Wait before retry
+    sleep options[:interval]
+  end while options[:loop]
+end
