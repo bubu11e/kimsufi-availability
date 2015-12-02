@@ -55,7 +55,6 @@ number_of_try = 3
 
 # Define default options of the script
 options = {}
-options[:verbose] = false
 options[:loop] = false
 options[:interval] = 0
 options[:offers] = references.keys 
@@ -70,9 +69,22 @@ OptionParser.new do |opts|
   opts.banner = "Usage: ./kimsufi-availability.rb [options]"
 
   # Verbose option
-  opts.on('-v', '--[no-]verbose', 'Run verbosely.') do |v|
-    options[:verbose] = v
-    logger.level = Logger::INFO
+  opts.on('-v', '--verbose [level]', String, 'Select log level (FATAL, ERROR, WARN, INFO, DEBUG).') do |level|
+    case level.upcase
+    when 'FATAL'
+      logger.level = Logger::FATAL
+    when 'ERROR'
+      logger.level = Logger::ERROR
+    when 'WARN'
+      logger.level = Logger::WARN
+    when 'INFO'
+      logger.level = Logger::INFO
+    when 'DEBUG'
+      logger.level = Logger::DEBUG
+    else
+      logger.fatal("#{level} is an invalid log level.")
+      exit 1
+    end
   end
 
   # Loop option
