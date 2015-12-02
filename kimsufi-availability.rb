@@ -115,7 +115,7 @@ api = OvhApi.new()
 clnt = options[:proxy] == nil ? HTTPClient.new() : HTTPClient.new(options[:proxy])
 
 if(options[:proxy] != nil && options[:proxy_user] != nil)
-  logger.info("Setting proxy authentification.")
+  logger.debug("Setting proxy authentification.")
   clnt.set_proxy_auth(options[:proxy_user], options[:proxy_pass])
 end
 
@@ -129,7 +129,7 @@ begin
   end while !response.ok? && counter > 0
   
   if counter == 0
-    logger.error("Maximum number of try to contact ovh api reached. with error: '#{response.message}'.")
+    logger.fatal("Maximum number of try to contact ovh api reached. HTTP error: '#{response.message}'.")
     exit 1
   end
                                  
@@ -154,9 +154,9 @@ begin
 
         # The offer is available, we execute the list of commands
         options[:commands].each do |command|
-          logger.info("About to execute command: '#{command}'.")
+          logger.debug("About to execute command: '#{command}'.")
           if system(command)
-            logger.info("Command executed successfully.")
+            logger.debug("Command executed successfully.")
           else
             logger.error("Command failed.")
           end
