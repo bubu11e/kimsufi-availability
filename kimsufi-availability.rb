@@ -144,6 +144,8 @@ Net::HTTP.start(uri.host, uri.port, options[:proxy_addr], options[:proxy_port], 
               logger.error("Command failed.")
             end
           end
+          # Exit script when commands have run
+          exit 0
         else
           # The offer is currently unavailable
           logger.info("Offer #{offer} currently not available.")
