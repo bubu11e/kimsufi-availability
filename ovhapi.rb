@@ -12,8 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-require 'net/http'
-require 'uri'
 require 'json'
 
 class OvhApi
@@ -36,6 +34,11 @@ class OvhApi
     # Look for 'answer' subsection
     if !data.include?('answer')
       raise JSON::JSONError, 'No section \'answer\'.'
+    end
+
+    # Check if the answer is valid
+    if !data['answer'] == nil
+      raise JSON::JSONError, "Subsection answer is null. Returned data: '#{data}'."
     end
 
     # Look for 'availability' subsection
