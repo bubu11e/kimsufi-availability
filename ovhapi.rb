@@ -37,8 +37,8 @@ class OvhApi
     end
 
     # Check if the answer is valid
-    if !data['answer'] == nil
-      raise JSON::JSONError, "Subsection answer is null. Returned data: '#{data}'."
+    if data['answer'] == nil
+      raise JSON::JSONError, "Subsection \'answer\' is null. Returned data: '#{data}'."
     end
 
     # Look for 'availability' subsection
